@@ -21,10 +21,10 @@ sudo apt install python3.6
 sudo apt install imagemagick jpegtran libjpeg-turbo-progs jhead
 ```
 
-3. Downlaod PPP.py and set execute permissions:
+3. Download PPP.py and set execute permissions:
 ```
-curl -LJO https://github.com/byte-cook/ppp/blob/main/ppp.py
-curl -LJO https://github.com/byte-cook/ppp/blob/main/osutil.py
+curl -LJO https://raw.githubusercontent.com/byte-cook/ppp/main/ppp.py
+curl -LJO https://raw.githubusercontent.com/byte-cook/ppp/main/osutil.py
 chmod +x ppp.py
 ```
 
