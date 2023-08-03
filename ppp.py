@@ -2,9 +2,11 @@
 
 import argparse
 import os
-import utils
+import osutil
 import subprocess
 import time
+import logging
+import sys
 
 """
 This program allows to rotate photos by Exif Orientation supported by many digital cameras.
@@ -23,8 +25,9 @@ convert -auto-orient original_file.jpg new_file.jpg
 
 Depends on: imagemagick, jpegtran, jpegexiforient (libjpeg-turbo-progs), jhead
 History:
-2013-11-19	initial version
+2013-11-19  initial version
 2014-02-14  add rename option
+2023-07-23  refactoring
 
 """
 
@@ -40,7 +43,7 @@ def _rotate_file(file, degrees, args):
         if degrees == -270: degrees = 90
         if degrees in (90,  180,  270):
             # force to use only perfect rotation
-            p = utils.execute_command(cmd=["jpegtran", "-copy",  "all",  "-rotate",  str(degrees), "-outfile",  file, "-perfect",  file], ignoreError=True, verbose=args.verbose, simulate=args.simulate)
+            p = osutil.execute_command(cmd=["jpegtran", "-copy",  "all",  "-rotate",  str(degrees), "-outfile",  file, "-perfect",  file], ignoreError=True, verbose=args.verbose, simulate=args.simulate)
             if p is None or p.poll() == 0:
                 #  lossless rotation succeeded
                 return
@@ -51,7 +54,7 @@ def _rotate_file(file, degrees, args):
         if degrees == -180: degrees = 180
         if degrees == 270: degrees = -90
         if degrees in (90,  180,  -90):
-            utils.execute_command(cmd=["mogrify", "-rotate", str(degrees), "-quality",  "100", file], verbose=args.verbose, simulate=args.simulate)
+            osutil.execute_command(cmd=["mogrify", "-rotate", str(degrees), "-quality",  "100", file], verbose=args.verbose, simulate=args.simulate)
 
 def rotate(files,  args):
     """Rotates images."""
@@ -67,8 +70,8 @@ def auto_rotate(files,  args):
             # Auto rotate only work for JPG files
             if args.verbose: print("{0}: {1}".format("Skipping non JPG file", file))
             continue
-        #p = utils.execute_command(cmd=["exiftool",  "-n",  "-S",  "-Orientation", file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p = utils.execute_command(cmd=["jpegexiforient",  "-n", file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        #p = osutil.execute_command(cmd=["exiftool",  "-n",  "-S",  "-Orientation", file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = osutil.execute_command(cmd=["jpegexiforient",  "-n", file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         orientation = p.communicate()[0]
         if orientation == "":
             if args.verbose: print("{0}: {1}".format("No Exif orientation set", file))
@@ -82,8 +85,8 @@ def auto_rotate(files,  args):
             print("{0}: {1}".format("Rotate " + str(degrees),  file))
             _rotate_file(file, degrees, args)
             # remove exif rotation
-            utils.execute_command(cmd=["jhead", "-q",  "-norot", file],  verbose=args.verbose, simulate=args.simulate)
-#            utils.execute_command(cmd=["jpegexiforient", "-1", file],  verbose=args.verbose, simulate=args.simulate)
+            osutil.execute_command(cmd=["jhead", "-q",  "-norot", file],  verbose=args.verbose, simulate=args.simulate)
+#            osutil.execute_command(cmd=["jpegexiforient", "-1", file],  verbose=args.verbose, simulate=args.simulate)
         elif args.verbose:
             print("{0}: {1}".format("No rotation necessary",  file))
     pass
@@ -94,8 +97,8 @@ def web(files,  args):
         name,  ext = os.path.splitext(file)
         targetFile = name + "-web" + ext
         print("{0}: {1} -> {2}".format("Prepare for web", file, targetFile))
-        if not os.path.exists(targetFile) or utils.prompt_yes_no(msg="Overwrite '" + targetFile + "'? (Y/N) ", noPrompt=args.noPrompt, simulate=args.simulate):
-            utils.execute_command(cmd=["convert", file, "-strip",  "-quality",  str(args.quality), targetFile], verbose=args.verbose, simulate=args.simulate)
+        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+            osutil.execute_command(cmd=["convert", file, "-strip",  "-quality",  str(args.quality), targetFile], verbose=args.verbose, simulate=args.simulate)
 
 def resize(files,  args):
     """Resizes images."""
@@ -103,21 +106,21 @@ def resize(files,  args):
         name,  ext = os.path.splitext(file)
         targetFile = name + "-" + args.size + ext
         print("{0}: {1} -> {2}".format("Resize", file, targetFile))
-        if not os.path.exists(targetFile) or utils.prompt_yes_no(msg="Overwrite '" + targetFile + "'? (Y/N) ", noPrompt=args.noPrompt, simulate=args.simulate):
-            utils.execute_command(cmd=["convert", file, "-resize", args.size, "-quality", "100", targetFile], verbose=args.verbose, simulate=args.simulate)
+        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+            osutil.execute_command(cmd=["convert", file, "-resize", args.size, "-quality", "100", targetFile], verbose=args.verbose, simulate=args.simulate)
 
 def remove_exif(files,  args):
     """Removes all Exif tags."""
     for file in files:
         print("{0}: {1}".format("Remove Exif", file))
         if _is_jpg_file(file):
-            utils.execute_command(cmd=["jhead","-q", "-purejpg", file], verbose=args.verbose, simulate=args.simulate)
+            osutil.execute_command(cmd=["jhead","-q", "-purejpg", file], verbose=args.verbose, simulate=args.simulate)
         else:
-            utils.execute_command(cmd=["mogrify", "-strip", file], verbose=args.verbose, simulate=args.simulate)
+            osutil.execute_command(cmd=["mogrify", "-strip", file], verbose=args.verbose, simulate=args.simulate)
 
 def rename(files, args):
     """Rename images by Exif creation date."""
-#   utils.execute_command(cmd=["jhead","-q", "-n%Y-%m-%d#%02i", file], verbose=args.verbose, simulate=args.simulate)
+#   osutil.execute_command(cmd=["jhead","-q", "-n%Y-%m-%d#%02i", file], verbose=args.verbose, simulate=args.simulate)
 #   exiftool -P -'Filename<DateTimeOriginal' -d %Y-%m-%d_Handy.%%e ORDNERNAME/* 
     currentTime = None
     currentIndex = None
@@ -126,7 +129,7 @@ def rename(files, args):
     for file in files:
         if _is_jpg_file(file):
             # set Exif creation date as file creation date
-            utils.execute_command(cmd=["jhead","-q", "-ft", file], stdout=subprocess.PIPE, verbose=args.verbose, simulate=args.simulate)
+            osutil.execute_command(cmd=["jhead","-q", "-ft", file], stdout=subprocess.PIPE, verbose=args.verbose, simulate=args.simulate)
 
         # get file creation time
         fileTime = os.path.getmtime(file)
@@ -144,13 +147,56 @@ def rename(files, args):
         # rename file
         dir = os.path.dirname(file)
         name,  ext = os.path.splitext(file)
-        targetFile = "{0}/{1}#{2:0>3}{3}".format(dir, fileTime, str(currentIndex), ext)
+        targetFile = os.path.join(dir, "{0}#{1:0>3}{2}".format(fileTime, str(currentIndex), ext))
         print("{0}: {1} -> {2}".format("Rename", file, targetFile))
         if file == targetFile:
             print("Nothing to do")
-        elif not os.path.exists(targetFile) or utils.prompt_yes_no(msg="Overwrite '" + targetFile + "'? (Y/N) ", noPrompt=args.noPrompt, simulate=args.simulate):
-            utils.execute_command(cmd=["mv", file, targetFile], verbose=args.verbose, simulate=args.simulate)
+        elif not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+            osutil.execute_command(cmd=["mv", file, targetFile], verbose=args.verbose, simulate=args.simulate)
 
+def get_files(tops, recursive=False, returnTopDirs=False):
+    """Returns all files and folders."""
+    dirList = list()
+    fileList = list()
+    for top in tops:
+        top = os.path.abspath(top)
+        if os.path.isdir(top):
+            if returnTopDirs:
+                dirList.append(top)
+            if recursive:
+                for (root, dirs, files) in os.walk(top):
+                    for d in dirs:
+                        d = os.path.join(root, d)
+                        dirList.append(d)
+                    for f in files:
+                        f = os.path.join(root, f)
+                        fileList.append(f)
+            else:
+                for f in os.listdir(top):
+                    f = os.path.join(top, f)
+                    if os.path.isdir(f):
+                        dirList.append(f)
+                    else:
+                        fileList.append(f)
+        else:
+            fileList.append(top)
+    # remove duplicates
+    dirList = set(dirList)
+    fileList = set(fileList)
+    return dirList, fileList
+
+def getYesOrNo(question, default=True):
+    valid = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    prompt = {True: " [Y/n] ", False: " [y/N] ", None: " [y/n] "}
+    while True:
+        print(question + prompt[default], end='')
+        choice = input().lower()
+        if default is not None and choice == "":
+            return default
+        elif choice in valid:
+            return valid[choice]
+        else:
+            print('Please respond with "yes" or "no" (or "y" or "n").')
 
 CMD_ROTATE = "rotate"
 CMD_AUTO_ROTATE = "auto-rotate"
@@ -195,7 +241,7 @@ if __name__ == "__main__":
         resizeParser.add_argument("-r", "--recursive", action="store_true", help="perform command recursively")
         resizeParser.add_argument("size", help="the new size in the format WIDTHxHEIGHT, e.g. 300, x200, 300x200, 300x200!, use ! to ignore original aspect ratio (see ImageMagick's geometry for more details)")
         resizeParser.add_argument("file", nargs="+", help="file or folder")
-        # resize
+        # remove exif tags
         removeExifParser = subparsers.add_parser(CMD_REMOVE_EXIF, help="removes Exif tags",  description="Removes all Exif tags.")
         removeExifParser.add_argument("-n", "--dry-run", action="store_true", dest="simulate", help="simulate installation process")
         removeExifParser.add_argument("-v", "--verbose", action="store_true", help="print verbose output")
@@ -211,24 +257,21 @@ if __name__ == "__main__":
         
         args = parser.parse_args()
         
-        dirs,  files = utils.get_files(args.file, recursive=args.recursive)
-#        files = [f for f in files if os.path.splitext(f)[1] == ".jpg"]
+        dirs,  files = get_files(args.file, recursive=args.recursive)
         files = sorted(files)
         if args.command in (CMD_ROTATE):
-            rotate(files,  args)
+            rotate(files, args)
         elif args.command in (CMD_AUTO_ROTATE):
-            auto_rotate(files,  args)
+            auto_rotate(files, args)
         elif args.command in (CMD_WEB):
-            web(files,  args)
+            web(files, args)
         elif args.command in (CMD_RESIZE):
-            resize(files,  args)
+            resize(files, args)
         elif args.command in (CMD_REMOVE_EXIF):
-            remove_exif(files,  args)
+            remove_exif(files, args)
         elif args.command in (CMD_RENAME):
-            rename(files,  args)
+            rename(files, args)
 
     except Exception as e:
         print(e)
-#        raise e
-        exit(1)
 
