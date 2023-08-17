@@ -97,7 +97,7 @@ def web(files,  args):
         name,  ext = os.path.splitext(file)
         targetFile = name + "-web" + ext
         print("{0}: {1} -> {2}".format("Prepare for web", file, targetFile))
-        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(question="Overwrite '" + targetFile + "'?"):
             osutil.execute_command(cmd=["convert", file, "-strip",  "-quality",  str(args.quality), targetFile], verbose=args.verbose, simulate=args.simulate)
 
 def resize(files,  args):
@@ -106,7 +106,7 @@ def resize(files,  args):
         name,  ext = os.path.splitext(file)
         targetFile = name + "-" + args.size + ext
         print("{0}: {1} -> {2}".format("Resize", file, targetFile))
-        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+        if not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(question="Overwrite '" + targetFile + "'?"):
             osutil.execute_command(cmd=["convert", file, "-resize", args.size, "-quality", "100", targetFile], verbose=args.verbose, simulate=args.simulate)
 
 def remove_exif(files,  args):
@@ -151,7 +151,7 @@ def rename(files, args):
         print("{0}: {1} -> {2}".format("Rename", file, targetFile))
         if file == targetFile:
             print("Nothing to do")
-        elif not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(msg="Overwrite '" + targetFile + "'?"):
+        elif not os.path.exists(targetFile) or args.noPrompt or args.simulate or getYesOrNo(question="Overwrite '" + targetFile + "'?"):
             osutil.execute_command(cmd=["mv", file, targetFile], verbose=args.verbose, simulate=args.simulate)
 
 def get_files(tops, recursive=False, returnTopDirs=False):
