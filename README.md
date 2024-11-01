@@ -18,7 +18,7 @@ sudo apt install python3.6
 
 2. Install external applications:
 ```
-sudo apt install imagemagick jpegtran libjpeg-turbo-progs jhead
+sudo apt install imagemagick libjpeg-turbo-progs jhead
 ```
 
 3. Download PPP.py and set execute permissions:
@@ -26,6 +26,11 @@ sudo apt install imagemagick jpegtran libjpeg-turbo-progs jhead
 curl -LJO https://raw.githubusercontent.com/byte-cook/ppp/main/ppp.py
 curl -LJO https://raw.githubusercontent.com/byte-cook/ppp/main/osutil.py
 chmod +x ppp.py
+```
+
+4. (Optional) Use opt.py to install it to the /opt directory:
+```
+sudo opt.py install ppp ppp.py osutil.py
 ```
 
 ## Example usage
