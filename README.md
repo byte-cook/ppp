@@ -13,7 +13,7 @@ Supported file formats are: JPEG, JPG
 
 1. Install Python3 as follows in Ubuntu/Debian Linux:
 ```
-sudo apt install python3.6
+sudo apt install python3
 ```
 
 2. Install external applications:
@@ -28,7 +28,7 @@ curl -LJO https://raw.githubusercontent.com/byte-cook/ppp/main/osutil.py
 chmod +x ppp.py
 ```
 
-4. (Optional) Use opt.py to install it to the /opt directory:
+4. (Optional) Use [opt.py](https://github.com/byte-cook/opt) to install it to the /opt directory:
 ```
 sudo opt.py install ppp ppp.py osutil.py
 ```
